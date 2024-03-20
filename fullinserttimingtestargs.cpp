@@ -4,8 +4,8 @@
 #include <vector>
 #include <set>
 #include <random>
-#include "topologicalordering.cpp"
-
+#include "topologicalordering2.cpp"
+//#include <gperftools/profiler.h>
 // Your C++ code goes here...
 
 
@@ -38,10 +38,10 @@ std::pair<std::vector<int>, std::vector<std::pair<int, int>>>
 makeGraph(int numNodes = 1000, int numEdges = INT_MAX) {
     
 
-    if(numEdges>numNodes*(numNodes-1)/4){
-
+    if(numEdges>(long long)numNodes*(numNodes-1)/4){
+        //std::cout <<((long long)numNodes)*(numNodes-1)/4<<std::endl;
         auto [nodes,edges]=makefullgraph(numNodes);
-        edges.resize(std::min((long)numEdges,(long)edges.size()));
+        edges.resize(std::min(numEdges,(int)edges.size()));
         return std::make_pair(nodes,edges);
     }
 
@@ -71,19 +71,24 @@ makeGraph(int numNodes = 1000, int numEdges = INT_MAX) {
     return std::make_pair(randnodes, randedges);
 }
 
-std::pair<std::vector<int>, std::vector<long>> 
-test(int nodenum,int insertsintervall,int maxedgenum,int samplesintervall){
+std::pair<std::vector<int>, std::vector<long long>> 
+testwithdict(int nodenum,int insertsintervall,int maxedgenum,int samplesintervall,bool insertnodes){
         auto [randnodes, randedges]=makeGraph(nodenum,maxedgenum);
 
     // Example: Measure time using std::chrono
     
     std::vector<int> timingsx;
-    std::vector<long> timingsy;
+    std::vector<long long> timingsy;
     auto tstart = std::chrono::high_resolution_clock::now();
 
     topologicalordering<int> t;
-    /*for(int i=0;i<randnodes.size();i++)
-        t.addNode(randnodes[i]);*/
+
+    if(insertnodes){
+        t.reserve(randnodes.size());
+        for(int i=0;i<randnodes.size();i++)
+            t.addNode(randnodes[i]);
+    }
+    /**/
 
     
     for(int i = 0; i < randedges.size(); ++i) {
@@ -110,15 +115,82 @@ test(int nodenum,int insertsintervall,int maxedgenum,int samplesintervall){
         auto tnow = std::chrono::high_resolution_clock::now();
         auto tdelta = std::chrono::duration_cast<std::chrono::microseconds>(tnow - tstart).count();
 
-        timingsx.push_back(t.size());
+        timingsx.push_back(randedges.size());
         timingsy.push_back(tdelta);
+
+        if(!t.validate()){throw std::runtime_error("cycle");}
     }
 
     return std::make_pair(timingsx, timingsy);
 }
 
+std::pair<std::vector<int>, std::vector<long long>> 
+testhandles(int nodenum,int insertsintervall,int maxedgenum,int samplesintervall){
+        auto [randnodes, randedges]=makeGraph(nodenum,maxedgenum);
+
+    // Example: Measure time using std::chrono
+    
+    std::vector<int> timingsx;
+    std::vector<long long> timingsy;
+    auto tstart = std::chrono::high_resolution_clock::now();
+
+    topologicalordering<int> t;
+
+    std::vector<NodeHandle<int>> nodes(randnodes.size());
+    t.reserve(randnodes.size());
+    for(int i=0;i<randnodes.size();i++){
+        int val=randnodes[i];
+        nodes[val]=t.addNode(val);
+    }
+    
+    /**/
+
+    
+    for(int i = 0; i < randedges.size(); ++i) {
+        if (i % samplesintervall == 0) {
+            auto tnow = std::chrono::high_resolution_clock::now();
+            auto tdelta = std::chrono::duration_cast<std::chrono::microseconds>(tnow - tstart).count();
+
+            timingsx.push_back(i);
+            timingsy.push_back(tdelta);
+        }
+
+        if (i % insertsintervall == 0) {
+            t.insertedges();
+        }
+
+        auto [start, stop] = randedges[i];
+        //t.addedge(start, stop);
+        nodes[start].addedge(nodes[stop]);
 
 
+        
+    }
+
+    {
+        t.insertedges();
+        auto tnow = std::chrono::high_resolution_clock::now();
+        auto tdelta = std::chrono::duration_cast<std::chrono::microseconds>(tnow - tstart).count();
+
+        timingsx.push_back(randedges.size());
+        timingsy.push_back(tdelta);
+
+        if(!t.validate()){throw std::runtime_error("cycle");}
+    }
+
+    return std::make_pair(timingsx, timingsy);
+}
+
+std::pair<std::vector<int>, std::vector<long long>> 
+test(int nodenum,int insertsintervall,int maxedgenum,int samplesintervall,int insertnodes){
+    if(insertnodes==0){
+        return testwithdict(nodenum, insertsintervall, maxedgenum, samplesintervall,false);
+    }else if(insertnodes==1){
+        return testwithdict(nodenum, insertsintervall, maxedgenum, samplesintervall,true);
+    }else{
+        return testhandles(nodenum, insertsintervall, maxedgenum, samplesintervall);
+    }
+}
 
 
 
@@ -127,33 +199,57 @@ test(int nodenum,int insertsintervall,int maxedgenum,int samplesintervall){
 
 int main(int argc, char* argv[]) {
     // Parse command line arguments
-    if (argc != 7) {
-        std::cerr << "Usage: " << argv[0] << " <nodenum> <randseed> <insertsintervall> <repeats> <edgenum> <samplesintervall>" << std::endl;
+    if (argc != 8) {
+        std::cerr << "Usage: " << argv[0] << " <nodenum> <randseed> <insertsintervall> <repeats> <edgenum> <samplesintervall> <insertnodes>" << std::endl;
         return 1;
     }
 
     int nodenum = std::stoi(argv[1]);
     int randseed = std::stoi(argv[2]);
     int insertsintervall = std::stoi(argv[3]);
-    //int repeats = std::stoi(argv[4]);
+    int repeats = std::stoi(argv[4]);  // Number of times to repeat the test
     int edgenum = std::stoi(argv[5]);
     int samplesintervall = std::stoi(argv[6]);
+    bool insertnodes = std::stoi(argv[7]);
 
+    
+    /*int nodenum = 1000000;
+    int randseed = 42;
+    int insertsintervall = 1000;
+    //int repeats = std::stoi(argv[4]);
+    int edgenum = nodenum;
+    int samplesintervall = nodenum/1000;*/
 
     std::srand(randseed);
 
+    auto [timingsx, averagedTimings] = test(nodenum, insertsintervall, edgenum, samplesintervall,insertnodes);
 
-    auto [timingsx,timingsy]=test( nodenum, insertsintervall, edgenum, samplesintervall);
+    // Repeat the test 'repeats' times and accumulate the results
+    for (int i = 1; i < repeats; ++i) {
+        auto [_, timingsy] = test(nodenum, insertsintervall, edgenum, samplesintervall,insertnodes);
 
+        // Accumulate timingsy
+        for (std::size_t j = 0; j < timingsy.size(); ++j) {
+            averagedTimings[j] += timingsy[j];
+        }
+    }
+
+    // Average the accumulated timingsy
+    for (std::size_t i = 0; i < averagedTimings.size(); ++i) {
+        averagedTimings[i] /= repeats;
+    }
+
+    // Print timingsx
     for (auto timex : timingsx) {
         std::cout << timex << " ";
     }
-    std::cout<<std::endl;
+    std::cout << std::endl;
 
-    for (auto timey : timingsy) {
+    // Print averaged timingsy
+    for (auto timey : averagedTimings) {
         std::cout << timey << " ";
     }
-    std::cout<<std::endl;
+    std::cout << std::endl;
 
     return 0;
 }
