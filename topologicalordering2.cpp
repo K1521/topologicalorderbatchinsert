@@ -226,22 +226,22 @@ class topologicalordering{
        
         void shift(int frontidx, std::vector<std::pair<Node<T>*, Node<T>*>>& Q) {
             int fillidx = frontidx;
-            auto [v, d] = Q.back();Q.pop_back(); //i am more familiar with pythons pop
+            auto [nodetoinsert, insertafter] = Q.back();Q.pop_back(); //i am more familiar with pythons pop
             
             while(true){
-                Node<T>& frontnode = *ordinv.at(frontidx);
+                Node<T>& frontnode = *ordinv.at(frontidx++);
                 if(!frontnode.vacant){//shift non vacant nodes
                     allocate(frontnode,fillidx++);
                 }else{
                     frontnode.vacant=false;
                 }
-                while (&frontnode==d)//insert nodes from Q
+                while (&frontnode==insertafter)//insert nodes from Q
                 {
-                    allocate(*v,fillidx++);
+                    allocate(*nodetoinsert,fillidx++);
                     if(Q.empty())return;
-                    std::tie(v, d) = Q.back();Q.pop_back();
+                    std::tie(nodetoinsert, insertafter) = Q.back();Q.pop_back();
                 }
-                frontidx++;
+
             }
             
 
