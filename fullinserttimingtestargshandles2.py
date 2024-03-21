@@ -23,8 +23,8 @@ def run_cpp_program(nodenum, randseed, insertsintervall, repeats, edgenum, sampl
     x,y,_=result.stdout.split("\n")
     
     
-    x = list(map(int, x.strip().split(" ")))
-    y = list(map(int, y.strip().split(" ")))
+    x = list(map(float, x.strip().split(" ")))
+    y = list(map(float, y.strip().split(" ")))
 
     return x,y
 

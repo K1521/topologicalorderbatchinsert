@@ -212,7 +212,9 @@ int main(int argc, char* argv[]) {
     int samplesintervall = std::stoi(argv[6]);
     bool insertnodes = std::stoi(argv[7]);
 
-    
+    if(repeats<1){
+        throw std::invalid_argument("repeats must be greater than or equal to 1");
+    }
     /*int nodenum = 1000000;
     int randseed = 42;
     int insertsintervall = 1000;
@@ -222,7 +224,7 @@ int main(int argc, char* argv[]) {
 
     std::srand(randseed);
 
-    auto [timingsx, averagedTimings] = test(nodenum, insertsintervall, edgenum, samplesintervall,insertnodes);
+    auto [timingsx, cumulativeTimings] = test(nodenum, insertsintervall, edgenum, samplesintervall,insertnodes);
 
     // Repeat the test 'repeats' times and accumulate the results
     for (int i = 1; i < repeats; ++i) {
@@ -230,13 +232,14 @@ int main(int argc, char* argv[]) {
 
         // Accumulate timingsy
         for (std::size_t j = 0; j < timingsy.size(); ++j) {
-            averagedTimings[j] += timingsy[j];
+            cumulativeTimings[j] += timingsy[j];
         }
     }
 
     // Average the accumulated timingsy
-    for (std::size_t i = 0; i < averagedTimings.size(); ++i) {
-        averagedTimings[i] /= repeats;
+    std::vector<float> averagedTimingsFloat(cumulativeTimings.begin(), cumulativeTimings.end());
+    for (std::size_t i = 0; i < averagedTimingsFloat.size(); ++i) {
+        averagedTimingsFloat[i] /= repeats;
     }
 
     // Print timingsx
@@ -246,7 +249,7 @@ int main(int argc, char* argv[]) {
     std::cout << std::endl;
 
     // Print averaged timingsy
-    for (auto timey : averagedTimings) {
+    for (auto timey : averagedTimingsFloat) {
         std::cout << timey << " ";
     }
     std::cout << std::endl;

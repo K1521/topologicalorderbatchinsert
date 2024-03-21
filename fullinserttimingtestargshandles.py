@@ -22,8 +22,8 @@ def run_cpp_program(nodenum, randseed, insertsintervall, repeats, edgenum, sampl
     x,y,_=result.stdout.split("\n")
     
     
-    x = list(map(int, x.strip().split(" ")))
-    y = list(map(int, y.strip().split(" ")))
+    x = list(map(float, x.strip().split(" ")))
+    y = list(map(float, y.strip().split(" ")))
 
     return x,y
 
@@ -34,7 +34,7 @@ nodenum = 10000
 
 insertsintervall = 10000
 plt.subplot(1,2, 1) 
-for edgenum in [10000,100000,4000000]:
+for edgenum in [10000,100000,1000000]:
     samplesintervall = edgenum//1000
     timings = run_cpp_program(nodenum, randseed, insertsintervall, repeats, edgenum, samplesintervall,1)
     #print("Timings:", timings)
@@ -53,7 +53,7 @@ nodenum = 10000
 
 insertsintervall = 10000
 plt.subplot(1,2, 2) 
-for edgenum in [10000,100000,10000000]:
+for edgenum in [10000,100000,1000000]:
     samplesintervall = edgenum//1000
     timings = run_cpp_program(nodenum, randseed, insertsintervall, repeats, edgenum, samplesintervall,2)
     #print("Timings:", timings)
