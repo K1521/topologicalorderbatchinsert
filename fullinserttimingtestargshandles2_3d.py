@@ -2,9 +2,11 @@ import subprocess
 import matplotlib.pyplot as plt
 import math
 import numpy as np
+import time
 def run_cpp_program(nodenum, randseed, insertsintervall, repeats, edgenum, samplesintervall,insertnodes):
     command = [
-        "./fullinserttimingtestargs.exe",  # Adjust the executable name if needed
+        #"./fullinserttimingtestargswithoutaddition.exe",  # Adjust the executable name if needed
+        "./fullinserttimingtestargs.exe",
         str(nodenum),
         str(randseed),
         str(insertsintervall),
@@ -31,20 +33,23 @@ def run_cpp_program(nodenum, randseed, insertsintervall, repeats, edgenum, sampl
 
 
 
-fig = plt.figure()
-ax = fig.add_subplot(projection='3d')
-ax.set_xlabel('insertsintervall')
-ax.set_ylabel('log10(density)')
-ax.set_zlabel('microseconds/edge')
 
 
+
+
+
+logdensity=True
+logbatchsize=True
 randseed = 42
-nodenum = 250
-maxedgenum=nodenum*(nodenum-1)//2
+nodenum = 2500
+
+batchsizeminmaxstep=[1,50000,1.3]
+densetyminmaxstep=[0.0001,0.1,2]
 #rs=5*maxedgenum*0.01
 #rs=maxedgenum*0.01
 rs=40000#this means the mesurement is repeated for a given density and insertsintervall untill a minimum of 40000 edges are inserted
 def mesuretime( randseed, nodenum, insertsintervall,density):
+    maxedgenum=nodenum*(nodenum-1)//2#Full graph
     edgenum=math.ceil(maxedgenum*density)
     repeats = math.ceil(rs/edgenum) #this makes more repeats for smaller tests to make them more accurate
     samplesintervall = edgenum+1
@@ -57,20 +62,35 @@ def mesuretime( randseed, nodenum, insertsintervall,density):
     return msperedge
 
 
-insertsintervalls=[1]
-while insertsintervalls[-1]<50000:
-    insertsintervalls.append(math.ceil(insertsintervalls[-1]*1.3))
-densitys=10**np.arange(-4,-1,0.25)
+insertsintervalls=[batchsizeminmaxstep[0]]
+while insertsintervalls[-1]<batchsizeminmaxstep[1]:
+    insertsintervalls.append(math.ceil(insertsintervalls[-1]*batchsizeminmaxstep[2]))
+densitys=10**np.arange(np.log10(densetyminmaxstep[0]),np.log10(densetyminmaxstep[1]),np.log10(densetyminmaxstep[2]))
 
-X, Y = np.meshgrid(insertsintervalls, np.log10(densitys))
-X, Y = np.meshgrid(insertsintervalls, densitys)
-X, Y = np.meshgrid(np.log10(insertsintervalls), np.log10(densitys))
+X, Y = np.meshgrid(np.log10(insertsintervalls)if logbatchsize else insertsintervalls, np.log10(densitys)if logdensity else densitys)
+
 Z=np.zeros(X.shape)
 
+fig = plt.figure()
 
-surf=ax.plot_surface(X, Y, Z, cmap='viridis', alpha=0.5)
+ax = fig.add_subplot(projection='3d')
+if logbatchsize:
+    ax.set_xlabel('log(batchsize)')
+else:
+    ax.set_xlabel('batchsize')
+
+if logbatchsize:
+    ax.set_ylabel('log(density)')
+else:
+    ax.set_ylabel('density')
+
+ax.set_zlabel('microseconds/edge')
+surf=ax.plot_surface(X, Y, Z, cmap='viridis')
 print(surf)
 
+
+update_interval = 2  # Update interval in seconds
+last_update_time = time.time()
 for i,density in enumerate(densitys):
     for j,insertsintervall in enumerate(insertsintervalls):
         # Calculate msperedge
@@ -80,11 +100,14 @@ for i,density in enumerate(densitys):
         #ax.scatter(X[i,j], Y[i,j], msperedge, 'o')
         
 
-        surf.remove()  # Remove the existing surface plot
-        surf = ax.plot_surface(X, Y, Z, cmap='viridis')
-        #ax.plot_surface(X, Y, Z, cmap='viridis', alpha=0.5)
-        
-        plt.pause(0.01)
-ax.axes.set_zlim3d(bottom=0,top=np.max(Z))
-plt.show()
+        if time.time() - last_update_time >= update_interval:
+            surf.remove()  # Remove the existing surface plot
+            surf = ax.plot_surface(X, Y, Z, cmap='viridis')
+            plt.pause(0.1)
+            last_update_time = time.time()
+
+
+surf.remove()  # Remove the existing surface plot
+surf = ax.plot_surface(X, Y, Z, cmap='viridis')
+ax.axes.set_zlim3d(bottom=0,top=np.max(Z))#this is here to set the minimum to zero
 plt.show()

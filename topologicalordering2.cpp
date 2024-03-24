@@ -37,13 +37,18 @@ struct Edge {
 
 template <typename T>
 class NodeHandle {
-    public:
+    
     topologicalordering<T> *owner;
     Node<T> *node;
+
+    public:
     NodeHandle(topologicalordering<T> *topoOrder, Node<T> *node): owner(topoOrder), node(node) {}
     //friend class topologicalordering<T>;
 
+    
     NodeHandle():owner(nullptr), node(nullptr){}
+    //only here so we can use a presized vector of this type
+    //there is probably a better way
 
 
     void addedge(NodeHandle<T> &other){
@@ -58,7 +63,7 @@ class topologicalordering{
     friend class NodeHandle<T>;
 
     private:
-        //vector<Node*> nodes=vector<Node*>();
+
         std::vector<Node<T>*> ordinv;
         std::vector<Edge<T>> newedges;
         std::unordered_map< T, Node<T>* > ValueToNode;
@@ -165,7 +170,6 @@ class topologicalordering{
         void addedge(Edge<T> newedge){
 
             markNodeAsUsed(*newedge.start);
-            //markNodeAsUsed(*newedge.end);
 
 
             if(newedge.start->ord>newedge.end->ord){
@@ -198,6 +202,7 @@ class topologicalordering{
                     }
 
                     //Q.clear();
+                    //Q.reserve(i-s)
                     discover(newedges.begin() + s, newedges.begin() + i,Q);
                     shift(lowerbound, Q);
                     s = i;
@@ -289,6 +294,13 @@ class topologicalordering{
                 if (!edge.end->vacant)
                 {
                     dfs(*edge.end, edge.start->ord,Q);
+                    /*try {
+                        dfs(*edge.end, edge.start->ord,Q);
+                    } catch (const std::runtime_error& e) {
+                        for (Node<T>* node : ordinv)  
+                            nodePtr->onStack=false;//Cleanup stack , this is slow but faster code would make the dfs slower  i think
+                        
+                    }*/
                 }
             }
 

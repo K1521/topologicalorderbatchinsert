@@ -13,7 +13,7 @@ frontnode=None
 
 def printstate():
     print()
-    print(f"nodetoinsert={nodetoinsert}, insertafter={insertafter} frontnode={frontnode}")
+    print(f"nodetoinsert={nodetoinsert}, insertafter={insertafter}")# frontnode={frontnode}")
     orderingc=[]
     for i,x in enumerate(ordering+[" "]):
 
