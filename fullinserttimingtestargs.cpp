@@ -1,10 +1,13 @@
 // my_cpp_program.cpp
+#include "topologicalordering.h"
 #include <iostream>
 #include <chrono>
 #include <vector>
 #include <set>
 #include <random>
-#include "topologicalordering2.cpp"
+#include <string>
+#include <algorithm>
+
 //#include <gperftools/profiler.h>
 // Your C++ code goes here...
 
@@ -14,12 +17,12 @@
 
 
 std::pair<std::vector<int>, std::vector<std::pair<int, int>>> 
-makefullgraph(int nodenum){
+makefullgraph(int nodenum,std::mt19937 gen){
     std::vector<int> randnodes;
     randnodes.reserve(nodenum);
     for(int i=0;i<nodenum;i++)
         randnodes.emplace_back(i);
-    std::random_shuffle(randnodes.begin(), randnodes.end());
+    std::shuffle(randnodes.begin(), randnodes.end(),gen);
 
     std::vector<std::pair<int, int>> randedges;
     randedges.reserve(nodenum*(nodenum-1)/2);
@@ -28,19 +31,19 @@ makefullgraph(int nodenum){
             randedges.emplace_back(std::make_pair(randnodes[i], randnodes[j]));
         }
     }
-    std::random_shuffle(randedges.begin(), randedges.end());
-    std::random_shuffle(randnodes.begin(), randnodes.end());
+    std::shuffle(randedges.begin(), randedges.end(),gen);
+    std::shuffle(randnodes.begin(), randnodes.end(),gen);
     return std::make_pair(randnodes, randedges);
 }
 
 
 std::pair<std::vector<int>, std::vector<std::pair<int, int>>> 
-makeGraph(int numNodes = 1000, int numEdges = INT_MAX) {
+makeGraph(int numNodes , int numEdges,std::mt19937 gen) {
     
 
     if(numEdges>(long long)numNodes*(numNodes-1)/4){
         //std::cout <<((long long)numNodes)*(numNodes-1)/4<<std::endl;
-        auto [nodes,edges]=makefullgraph(numNodes);
+        auto [nodes,edges]=makefullgraph(numNodes,gen);
         edges.resize(std::min(numEdges,(int)edges.size()));
         return std::make_pair(nodes,edges);
     }
@@ -49,11 +52,10 @@ makeGraph(int numNodes = 1000, int numEdges = INT_MAX) {
     for (int i = 0; i < numNodes; ++i) {
         randnodes.push_back(i);
     }
-    std::random_shuffle(randnodes.begin(), randnodes.end());
+    std::shuffle(randnodes.begin(), randnodes.end(),gen);
 
     
     std::set<std::pair<int, int>> edgesSet;
-    std::mt19937 gen(std::rand());
 
     while (edgesSet.size() < numEdges) {
         int a = std::uniform_int_distribution<int>(0, numNodes - 2)(gen);
@@ -65,15 +67,15 @@ makeGraph(int numNodes = 1000, int numEdges = INT_MAX) {
 
 
 
-    std::random_shuffle(randedges.begin(), randedges.end());
-    std::random_shuffle(randnodes.begin(), randnodes.end());
+    std::shuffle(randedges.begin(), randedges.end(),gen);
+    std::shuffle(randnodes.begin(), randnodes.end(),gen);
 
     return std::make_pair(randnodes, randedges);
 }
 
 std::pair<std::vector<int>, std::vector<long long>> 
-testwithdict(int nodenum,int insertsintervall,int maxedgenum,int samplesintervall,bool insertnodes){
-        auto [randnodes, randedges]=makeGraph(nodenum,maxedgenum);
+testwithdict(int nodenum,int insertsintervall,int maxedgenum,int samplesintervall,bool insertnodes,std::mt19937 gen){
+        auto [randnodes, randedges]=makeGraph(nodenum,maxedgenum,gen);
 
     // Example: Measure time using std::chrono
     
@@ -125,8 +127,8 @@ testwithdict(int nodenum,int insertsintervall,int maxedgenum,int samplesinterval
 }
 
 std::pair<std::vector<int>, std::vector<long long>> 
-testhandles(int nodenum,int insertsintervall,int maxedgenum,int samplesintervall){
-        auto [randnodes, randedges]=makeGraph(nodenum,maxedgenum);
+testhandles(int nodenum,int insertsintervall,int maxedgenum,int samplesintervall,std::mt19937 gen){
+        auto [randnodes, randedges]=makeGraph(nodenum,maxedgenum,gen);
 
     // Example: Measure time using std::chrono
     
@@ -182,13 +184,13 @@ testhandles(int nodenum,int insertsintervall,int maxedgenum,int samplesintervall
 }
 
 std::pair<std::vector<int>, std::vector<long long>> 
-test(int nodenum,int insertsintervall,int maxedgenum,int samplesintervall,int insertnodes){
+test(int nodenum,int insertsintervall,int maxedgenum,int samplesintervall,int insertnodes,std::mt19937 gen){
     if(insertnodes==0){
-        return testwithdict(nodenum, insertsintervall, maxedgenum, samplesintervall,false);
+        return testwithdict(nodenum, insertsintervall, maxedgenum, samplesintervall,false,gen);
     }else if(insertnodes==1){
-        return testwithdict(nodenum, insertsintervall, maxedgenum, samplesintervall,true);
+        return testwithdict(nodenum, insertsintervall, maxedgenum, samplesintervall,true,gen);
     }else{
-        return testhandles(nodenum, insertsintervall, maxedgenum, samplesintervall);
+        return testhandles(nodenum, insertsintervall, maxedgenum, samplesintervall,gen);
     }
 }
 
@@ -222,13 +224,14 @@ int main(int argc, char* argv[]) {
     int edgenum = nodenum;
     int samplesintervall = nodenum/1000;*/
 
-    std::srand(randseed);
+    //std::srand(randseed);
+    std::mt19937 gen(randseed);
 
-    auto [timingsx, cumulativeTimings] = test(nodenum, insertsintervall, edgenum, samplesintervall,insertnodes);
+    auto [timingsx, cumulativeTimings] = test(nodenum, insertsintervall, edgenum, samplesintervall,insertnodes,gen);
 
     // Repeat the test 'repeats' times and accumulate the results
     for (int i = 1; i < repeats; ++i) {
-        auto [_, timingsy] = test(nodenum, insertsintervall, edgenum, samplesintervall,insertnodes);
+        auto [_, timingsy] = test(nodenum, insertsintervall, edgenum, samplesintervall,insertnodes,gen);
 
         // Accumulate timingsy
         for (std::size_t j = 0; j < timingsy.size(); ++j) {

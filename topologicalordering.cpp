@@ -1,273 +1,208 @@
-#include <vector>
-//#include <iterator>  
-#include <unordered_map>  
-#include <algorithm>
-#include <stdexcept>
+#include "topologicalordering.h"
 
+template<typename T>
+bool topologicalordering<T>::validate() {
+    for (int i = 0; i < ordinv.size(); i++) {
+        Node<T>& n = *ordinv[i];
+        if (n.ord != i)
+            return false;
 
-template <typename T>
-class topologicalordering;  // Forward declaration
-
-template <typename T>
-class Node {
-private:
-    bool vacant = false;
-    bool onStack = false;
-    int ord = -1;
-    std::vector<Node<T>*> children;
-    T value;
-
-    //Node(int ord,T value) : ord(ord), value(value) {}
-
-    friend class topologicalordering<T>;
-};
-
-template <typename T>
-struct Edge {
-private:
-    Node<T>* start;
-    Node<T>* end;
-
-    Edge(Node<T>* start, Node<T>* end) : start(start), end(end) {}
-    friend class topologicalordering<T>;
-};
-
-
-template <typename T>
-class topologicalordering {
-private:
-    //vector<Node*> nodes=vector<Node*>();
-    std::vector<Node<T>*> ordinv;
-    std::vector<Edge<T>> newedges;
-    std::unordered_map< T, Node<T>> ValueToNode;
-    int usednodes = 0;
-
-
-public:
-    inline std::size_t size() {
-        return ordinv.size();
-    }
-
-    /*~topologicalordering(){
-        for (Node<T>* node : ordinv) {
-            delete node;
-        }
-    }*/
-    void reserve(size_t n) {
-        ordinv.reserve(n);
-        ValueToNode.reserve(n);
-    }
-
-    bool validate() {
-        //cout << ordinv.size()<< endl;
-        for (int i = 0; i < ordinv.size(); i++) {
-            Node<T>* n = ordinv[i];
-            if (n->ord != i)
+        for (Node<T>* childnode : n.children) {
+            if (n.ord >= childnode->ord)
                 return false;
-
-            for (Node<T>* childnode : n->children) {
-                if (n->ord >= childnode->ord)
-                    return false;
-            }
-            if (n->vacant || n->onStack)return false;
-
         }
-        return true;
+        if (n.vacant || n.onStack)
+            return false;
+    }
+    return true;
+}
+
+template<typename T>
+NodeHandle<T> topologicalordering<T>::addNode(T value) {
+    return NodeHandle(this, getOrCreateNode(value)); // Assuming getOrCreateNode function is defined elsewhere
+}
+
+template<typename T>
+void topologicalordering<T>::reserve(size_t n) {
+    ordinv.reserve(n);
+    ValueToNode.reserve(n);
+}
+
+template<typename T>
+void topologicalordering<T>::addedge(T start, T end) {
+    addedge(Edge(getOrCreateNode(start), getOrCreateNode(end)));
+}
+
+
+template<typename T>
+T topologicalordering<T>::operator[](size_t index) const {
+    return ordinv[index]->value;
+}
+
+template<typename T>
+T topologicalordering<T>::at(size_t index) const {
+    return ordinv.at(index)->value; // TODO: Add index out of bounds handling
+}
+
+
+
+
+template<typename T>
+Node<T>* topologicalordering<T>::getOrCreateNode(T value) {
+    Node<T>*& nodeptr = ValueToNode[value];
+    if (nodeptr == nullptr) { // Creates a node if it is not in the nodes dictionary
+        int ord = ordinv.size();
+        nodeptr = new Node<T>(ord, value);
+        nodeptr->children.reserve(8);
+        ordinv.push_back(nodeptr);
     }
 
-    void addNode(T value) {
-        getOrCreateNode(value, false);
-    }
+    return nodeptr;
+}
 
-
-    void addedge(T start, T end) {//todo add direct cycle detection
-        addedge(Edge(getOrCreateNode(start, true), getOrCreateNode(end, true)));
-    }
-
-    size_t size() const {
-        return ordinv.size();
-    }
-
-    T operator[](size_t index) const {
-        return ordinv[index]->value;
-    }
-
-    T at(size_t index) const {//TODO throw index out of bounds
-        return ordinv.at(index)->value;
-    }
-
-private:
-
-
-
-    Node<T>* getOrCreateNode(T value, bool used) {
-        Node<T>& node = ValueToNode[value];
-        if (node.ord == -1) { // creates a node if it is not in the nodes dictionary
-            node.ord = ordinv.size();
-            node.value = value;
-            node.children.reserve(8);
-            ordinv.push_back(&node);
+template<typename T>
+void topologicalordering<T>::markNodeAsUsed(Node<T>& nodeptr) {
+    int nodeindex = nodeptr.ord;
+    if (nodeindex >= usednodes) { // If the node is not already a used node
+        if (nodeindex != usednodes) {
+            Node<T>& unusednodeptr = *ordinv[usednodes]; // Get the first unused node
+            allocate(unusednodeptr, nodeindex); // Swap the nodes so the node we want is the first unused node
+            allocate(nodeptr, usednodes);
         }
-        if (used)
-            markNodeAsUsed(&node); // assuming markNodeAsUsed takes a Node<T>* as an argument
-        return &node;
+        usednodes++; // Make the first unused node the last used node
+    }
+}
+
+template<typename T>
+void topologicalordering<T>::addedge(Edge<T> newedge) {
+    markNodeAsUsed(*newedge.start);
+
+    if (newedge.start->ord > newedge.end->ord) {
+        newedges.push_back(newedge);
     }
 
-    /*Node<T>* getOrCreateNode(T value,bool used) {
-        Node<T>*& nodeptr = ValueToNode[value];
-        if (nodeptr==NULL) {//creates a node if it is not in the nodes dictionary
-            int ord = ordinv.size();
-            nodeptr = new Node<T>(ord, value);
-            nodeptr->children.reserve(8);
-            ordinv.push_back(nodeptr);
-        }
-
-        if(used)
-            markNodeAsUsed(nodeptr);//das sorgt dafür das zwichen benutzten nodes keine unbenutzten knoten sind (unbenutzt heisst das der knoten keine einkommenden/ausgehende kanten hat)
-
-
-        return nodeptr;
-    }*/
-
-    inline void markNodeAsUsed(Node<T>* nodeptr) {
-        int nodeindex = nodeptr->ord;
-        if (nodeindex >= usednodes) {//wenn die node nicht schon eine usednode ist
-            if (nodeindex != usednodes) {
-                Node<T>*& unusednodeptr = ordinv[usednodes];//get first unusednode
-                allocate(unusednodeptr, nodeindex);//swap the nodes so the node we want is the first unusednode
-                allocate(nodeptr, usednodes);
-            }
-            usednodes++;//make the first unusednode the last usednode
-        }
-    }
+    newedge.start->children.push_back(newedge.end);
+}
 
 
 
+template<typename T>
+void topologicalordering<T>::insertedges() {
+    if (newedges.empty()) return;
 
-
-    void addedge(Edge<T> newedge) {
-        if (newedge.start->ord > newedge.end->ord) {
-            newedges.push_back(newedge);
-        }
-
-        newedge.start->children.push_back(newedge.end);
-
-    }
-
-public:
-    void insertedges() {
-        if (newedges.empty()) return;
-
-        std::sort(newedges.begin(), newedges.end(),
+    // sort invalidating edges into descending order by index of tail
+    std::sort(newedges.begin(), newedges.end(),
             [](const Edge<T>& e1, const Edge<T>& e2) {
                 return e1.start->ord > e2.start->ord;
             });
 
-        int lowerbound = ordinv.size();
-        int s = 0;
-        std::vector<std::pair<Node<T>*, Node<T>*>> Q;
+    int lowerbound = newedges[0].end->ord;
+    int upperbound = newedges[0].start->ord;
+    int s = 0; // start of current region
+    Qtype Q;
 
-        for (int i = 0; i < newedges.size(); i++) {
-            auto [x, y] = newedges[i];
-            if (x->ord < lowerbound && i != 0) {
-                if (!Q.empty()) {//TODO remove after testing
-                    throw std::runtime_error("Q isnt empty D:");
+    std::vector<std::pair<T, T>> invallidedges;
+
+    for (int i = 1; i < newedges.size(); i++) {
+        auto [x, y] = newedges[i];
+        if (x->ord < lowerbound) {
+            if (!Q.empty()) {
+                throw std::runtime_error("Q isn't empty D:");
+            }
+
+            discover(newedges.begin() + s, newedges.begin() + i, Q, invallidedges, lowerbound, lowerbound);
+            shift(lowerbound, Q);
+            s = i;
+            upperbound = x->ord;
+        }
+
+        lowerbound = std::min(y->ord, lowerbound);
+    }
+
+    if (!Q.empty()) {
+        throw std::runtime_error("Q isn't empty D:");
+    }
+
+    discover(newedges.begin() + s, newedges.end(), Q, invallidedges, lowerbound, lowerbound);
+    shift(lowerbound, Q);
+
+    newedges.clear();
+
+    if (!invallidedges.empty()) {
+        throw CycleDetectedException<T>(invallidedges);
+    }
+}
+
+template<typename T>
+void topologicalordering<T>::allocate(Node<T>& v, int i) {
+    v.ord = i;
+    ordinv[i] = &v;
+}
+
+       
+template<typename T>
+void topologicalordering<T>::shift(int frontidx, Qtype& Q) {
+    int fillidx = frontidx;
+    auto [nodetoinsert, insertafter] = Q.back(); Q.pop_back(); //i am more familiar with pythons pop
+
+    while (true) {
+        Node<T>& frontnode = *ordinv.at(frontidx);
+        if (!frontnode.vacant) { // shift non-vacant nodes
+            allocate(frontnode, fillidx++);
+        } else {
+            frontnode.vacant = false;
+        }
+
+        // while (&frontnode==insertafter)
+        while (frontidx == insertafter) { // insert nodes from Q
+            allocate(*nodetoinsert, fillidx++);
+            if (Q.empty()) return;
+            std::tie(nodetoinsert, insertafter) = Q.back(); Q.pop_back();
+        }
+        frontidx++;
+    }
+}
+
+template<typename T>
+void topologicalordering<T>::dfs(Node<T>& v, int ub, Qtype& Q) {
+    v.vacant = true;
+    v.onStack = true;
+
+    for (Node<T>* s : v.children) {
+        if (s->onStack)
+            throw std::runtime_error("cycle");
+        if ((!s->vacant) && (s->ord < ub))
+            dfs(*s, ub, Q);
+    }
+
+    v.onStack = false;
+
+    Q.emplace_back(&v, ub);
+}
+
+template<typename T>
+void topologicalordering<T>::discover(typename std::vector<Edge<T>>::iterator start,
+                                      typename std::vector<Edge<T>>::iterator end,
+                                      Qtype& Q,
+                                      std::vector<std::pair<T, T>>& invallidedges,
+                                      int lb,
+                                      int ub) {
+    for (auto it = start; it != end; ++it) {
+        Edge<T> edge = *it;
+        if (!edge.end->vacant) {
+            try {
+                dfs(*edge.end, edge.start->ord, Q);
+            } catch (const std::runtime_error& e) {
+                for (int i = lb; i < ub; ++i) ordinv[i]->onStack = false;
+
+                while (!Q.empty()) {
+                    auto [nodetoinsert, insertafter] = Q.back();
+                    if (edge.start->ord != insertafter) break;
+                    Q.pop_back();
                 }
 
-                //Q.clear();
-                discover(newedges.begin() + s, newedges.begin() + i, Q);
-                shift(lowerbound, Q);
-                s = i;
-            }
-
-            lowerbound = std::min(y->ord, lowerbound);
-        }
-        Q.clear();
-        //Q.reserve(newedges.size()-s);
-        discover(newedges.begin() + s, newedges.end(), Q);
-        shift(lowerbound, Q);
-
-
-        newedges.clear();//<-lol i forgot this line and then i spent 2 day debugging
-
-    }
-private:
-    inline void allocate(Node<T>* v, int i) {
-        v->ord = i;
-        ordinv[i] = v;
-    }
-
-
-    void shift(int frontidx, std::vector<std::pair<Node<T>*, Node<T>*>>& Q) {
-        int fillidx = frontidx;
-        auto [v, d] = Q.back(); Q.pop_back(); //i am more familiar with pythons pop
-
-        while (true) {
-            Node<T>* frontnode = ordinv.at(frontidx);
-            if (!frontnode->vacant) {//shift non vacant nodes
-                allocate(frontnode, fillidx++);
-            }
-            else {
-                frontnode->vacant = false;
-            }
-            while (frontnode == d)//insert nodes from Q
-            {
-                allocate(v, fillidx++);
-                if (Q.empty())return;
-                std::tie(v, d) = Q.back(); Q.pop_back();
-            }
-            frontidx++;
-        }
-
-
-
-    }
-
-
-    void dfs(Node<T>* v, int ub, std::vector<std::pair<Node<T>*, Node<T>*>>& Q) {
-        v->vacant = true;
-        v->onStack = true;
-        //cout << "visiting" << v->id<<endl;
-        for (Node<T>* s : v->children)
-        {
-
-            if (s->onStack)
-                throw std::runtime_error("cycle");
-            if ((!s->vacant) && (s->ord < ub))
-                dfs(s, ub, Q);
-        }
-        v->onStack = false;
-
-        Q.emplace_back(v, ordinv[ub]);
-    }
-
-
-
-
-    void discover(typename std::vector<Edge<T>>::iterator start,
-        typename std::vector<Edge<T>>::iterator end,
-        std::vector<std::pair<Node<T>*, Node<T>*>>& Q) {
-
-
-        /*
-
-        sort(start,end, [](const Edge<T>& edge1, const Edge<T>& edge2) {
-            return edge1.start->ord > edge2.start->ord;
-        });//ich bin relativ sicher das dieser sort vermeidbar ist
-
-        */
-
-        //vector<pair<Node*, Node*>> Q=vector<pair<Node*, Node*>>();//TODO return Q by refference
-        for (auto it = start; it != end; ++it)
-        {
-            Edge<T> edge = *it;
-            if (!edge.end->vacant)
-            {
-                dfs(edge.end, edge.start->ord, Q);
+                invallidedges.emplace_back(edge.start->value, edge.end->value);
             }
         }
-
-
     }
-
-};
+}
