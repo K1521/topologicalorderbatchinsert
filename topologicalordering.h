@@ -152,3 +152,5 @@ class topologicalordering{
 
 
 };
+
+#include "topologicalordering.cpp"
