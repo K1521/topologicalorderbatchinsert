@@ -1,4 +1,60 @@
-//#include "topologicalordering.h"
+#include "topologicalordering.h"
+
+
+template<typename T>
+CycleDetectedException<T>::CycleDetectedException(const std::vector<std::pair<T, T>>& cycleEdges) 
+    : cycleEdges(cycleEdges) {}
+
+template<typename T>
+const char* CycleDetectedException<T>::what() const noexcept {
+    return "Graph contains a cycle";
+}
+
+template<typename T>
+const std::vector<std::pair<T, T>>& CycleDetectedException<T>::getCycleEdges() const {
+    return cycleEdges;
+}
+
+
+
+
+template<typename T>
+NodeHandle<T>::NodeHandle(topologicalordering<T>* topoOrder, Node<T>* node) : owner(topoOrder), node(node) {}
+
+template<typename T>
+NodeHandle<T>::NodeHandle() : owner(nullptr), node(nullptr) {}
+
+template<typename T>
+void NodeHandle<T>::addedge(NodeHandle<T>& other) {
+    if (owner != other.owner)
+        throw std::runtime_error("Cannot add edge between nodes from different topological orderings.");
+    owner->addedge(Edge(node, other.node));
+}
+
+
+
+
+
+template<typename T>
+Node<T>::Node(int ord, T value) : ord(ord), value(value) {}
+
+
+
+template<typename T>
+Edge<T>::Edge(Node<T>* start, Node<T>* end) : start(start), end(end) {}
+
+
+template<typename T>
+size_t topologicalordering<T>::size() const {
+    return ordinv.size();
+}
+
+template<typename T>
+topologicalordering<T>::~topologicalordering() {
+    for (Node<T>* node : ordinv) {
+        delete node;
+    }
+}
 
 template<typename T>
 bool topologicalordering<T>::validate() {

@@ -110,4 +110,5 @@ for i,density in enumerate(densitys):
 surf.remove()  # Remove the existing surface plot
 surf = ax.plot_surface(X, Y, Z, cmap='viridis')
 ax.axes.set_zlim3d(bottom=0,top=np.max(Z))#this is here to set the minimum to zero
+print(np.average(Z))
 plt.show()

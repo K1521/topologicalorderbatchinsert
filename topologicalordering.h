@@ -7,77 +7,59 @@
 
 
 
-template <typename T>
-class topologicalordering;  // Forward declaration
-
-template <typename T>
-class NodeHandle;
 
 template<typename T>
 class CycleDetectedException : public std::exception {
-    private:
-        std::vector<std::pair<T, T>> cycleEdges;
+private:
+    std::vector<std::pair<T, T>> cycleEdges;
 
-    public:
-        CycleDetectedException(const std::vector<std::pair<T, T>>& cycleEdges) : cycleEdges(cycleEdges) {}
-
-        const char* what() const noexcept override {
-            return "Graph contains a cycle";
-        }
-
-        const std::vector<std::pair<T, T>>& getCycleEdges() const {
-            return cycleEdges;
-        }
+public:
+    CycleDetectedException(const std::vector<std::pair<T, T>>& cycleEdges);
+    const char* what() const noexcept override;
+    const std::vector<std::pair<T, T>>& getCycleEdges() const;
 };
 
 template <typename T>
 class Node {
-
+private:
     bool vacant = false;
     bool onStack = false;
     int ord;
     std::vector<Node<T>*> children;
     T value;
 
-    Node(int ord,T value) : ord(ord), value(value) {}
+    Node(int ord, T value);
 
-    friend class topologicalordering<T>;
+    template<typename U>
+    friend class topologicalordering;
 };
 
 template <typename T>
 struct Edge {
-
     Node<T>* start;
     Node<T>* end;
 
-    Edge(Node<T>* start, Node<T>* end) : start(start), end(end) {}
-    friend class topologicalordering<T>;
-    friend class NodeHandle<T>;
+    Edge(Node<T>* start, Node<T>* end);
 
+    template<typename U>
+    friend class topologicalordering;
 
+    template<typename U>
+    friend class NodeHandle;
 };
 
 template <typename T>
+class topologicalordering;
+
+template <typename T>
 class NodeHandle {
-    
-    topologicalordering<T> *owner;
-    Node<T> *node;
+    topologicalordering<T>* owner;
+    Node<T>* node;
 
-    public:
-    NodeHandle(topologicalordering<T> *topoOrder, Node<T> *node): owner(topoOrder), node(node) {}
-    //friend class topologicalordering<T>;
-
-    
-    NodeHandle():owner(nullptr), node(nullptr){}
-    //only here so we can use a presized vector of this type
-    //there is probably a better way
-
-
-    void addedge(NodeHandle<T> &other){
-        if(owner!=other.owner)
-            throw std::runtime_error("Cannot add edge between nodes from different topological orderings.");
-        owner->addedge(Edge(node,other.node));
-    }
+public:
+    NodeHandle(topologicalordering<T>* topoOrder, Node<T>* node);
+    NodeHandle();
+    void addedge(NodeHandle<T>& other);
 };
 
 
@@ -97,15 +79,8 @@ class topologicalordering{
     public:        
     
         
-        size_t size() const {
-            return ordinv.size();
-        }
-
-        ~topologicalordering() {
-            for (Node<T>* node : ordinv) {
-                delete node;
-            }
-        }
+        size_t size() const;
+        ~topologicalordering();
 
         bool validate();
 
@@ -152,5 +127,6 @@ class topologicalordering{
 
 
 };
+
 
 #include "topologicalordering.cpp"
