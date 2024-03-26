@@ -24,6 +24,22 @@ class Node {
     friend class topologicalordering<T>;
 };
 
+template<typename T>
+class CycleDetectedException : public std::exception {
+private:
+    std::vector<std::pair<T, T>> cycleEdges;
+
+public:
+    CycleDetectedException(const std::vector<std::pair<T, T>>& cycleEdges):cycleEdges(cycleEdges) {};
+
+    const char* what() const noexcept {
+        return "Graph contains a cycle";
+    }
+    const std::vector<std::pair<T, T>>& getCycleEdges() const {
+        return cycleEdges;
+    }
+};
+
 template <typename T>
 struct Edge {
 
@@ -126,6 +142,16 @@ class topologicalordering{
             return ordinv.at(index)->value;
         }
 
+        int ord(T node)const {//index of node in the topological order
+            auto it = ValueToNode.find(node); 
+            if (it != ValueToNode.end()) {
+                Node<T>* nodeptr = it->second;
+                return nodeptr->ord; 
+            }
+            return -1;  
+        }
+
+
         private:
 
 
@@ -181,45 +207,52 @@ class topologicalordering{
         }
 
         public:
-        void insertedges(){
+        void insertedges() {
             if (newedges.empty()) return;
 
+            // sort invalidating edges into descending order by index of tail
             std::sort(newedges.begin(), newedges.end(),
                     [](const Edge<T>& e1, const Edge<T>& e2) {
                         return e1.start->ord > e2.start->ord;
                     });
 
-            int lowerbound = ordinv.size();
-            int s = 0;
+            int lowerbound = newedges[0].end->ord;
+            int upperbound = newedges[0].start->ord;
+            int s = 0; // start of current region
             Qtype Q;
 
-            for (int i = 0; i < newedges.size(); i++) {
+            std::vector<std::pair<T, T>> invallidedges;
+
+            for (int i = 1; i < newedges.size(); i++) {
                 auto [x, y] = newedges[i];
-                if (x->ord < lowerbound && i != 0) {
-                    if(!Q.empty()){//TODO remove after testing
-                        throw std::runtime_error("Q isnt empty D:");
+                if (x->ord < lowerbound) {
+                    if (!Q.empty()) {//TODO Remove after testing
+                        throw std::runtime_error("Q isn't empty D:");
                     }
 
-                    //Q.clear();
-                    discover(newedges.begin() + s, newedges.begin() + i,Q);
+                    discover(newedges.begin() + s, newedges.begin() + i, Q, invallidedges, lowerbound, upperbound);
                     shift(lowerbound, Q);
                     s = i;
+                    upperbound = x->ord;
                 }
 
                 lowerbound = std::min(y->ord, lowerbound);
             }
-            //Q.clear();
-            if(!Q.empty()){//TODO remove after testing
-                        throw std::runtime_error("Q isnt empty D:");
-                    }
-            //Q.reserve(newedges.size()-s);
-            discover(newedges.begin() + s, newedges.end(),Q);
+
+            if (!Q.empty()) {//TODO Remove after testing
+                throw std::runtime_error("Q isn't empty D:");
+            }
+
+            discover(newedges.begin() + s, newedges.end(), Q, invallidedges, lowerbound, upperbound);
             shift(lowerbound, Q);
 
+            newedges.clear();
 
-            newedges.clear();//<-lol i forgot this line and then i spent 2 day debugging
-            
+            if (!invallidedges.empty()) {
+                throw CycleDetectedException<T>(invallidedges);
+            }
         }
+        
         private:
         inline void allocate(Node<T>& v,int i){
             v.ord=i;
@@ -228,6 +261,7 @@ class topologicalordering{
 
        
         void shift(int frontidx, Qtype& Q) {
+            if(Q.empty())return;//neded in case of cycle
             int fillidx = frontidx;
             auto [nodetoinsert, insertafter] = Q.back(); Q.pop_back(); //i am more familiar with pythons pop
 
@@ -257,7 +291,7 @@ class topologicalordering{
             for (Node<T>* s : v.children)
             {
 
-                if (s->onStack)
+                if (s->onStack||s->ord==ub)//this is not in the paper but neccesary for cycle detection
                     throw std::runtime_error("cycle");
                 if ((!s->vacant) && (s->ord < ub))
                     dfs(*s, ub,Q);
@@ -271,30 +305,31 @@ class topologicalordering{
 
 
 
-        void discover(typename std::vector<Edge<T>>::iterator start,
-                      typename std::vector<Edge<T>>::iterator end,
-                      Qtype& Q) {
-            
+    void discover(typename std::vector<Edge<T>>::iterator start,
+                typename std::vector<Edge<T>>::iterator end,
+                Qtype& Q,
+                std::vector<std::pair<T, T>>& invallidedges,
+                int lb,
+                int ub) {
+        for (auto it = start; it != end; ++it) {
+            Edge<T> edge = *it;
+            if (!edge.end->vacant) {
+                try {
 
-            /*
+                    dfs(*edge.end, edge.start->ord, Q);
+                } catch (const std::runtime_error& e) {
+                    for (int i = lb; i <= ub; ++i) ordinv[i]->onStack = false;
 
-            sort(start,end, [](const Edge<T>& edge1, const Edge<T>& edge2) {
-                return edge1.start->ord > edge2.start->ord;
-            });//ich bin relativ sicher das dieser sort vermeidbar ist
+                    while (!Q.empty()) {
+                        auto [nodetoinsert, insertafter] = Q.back();
+                        if (edge.start->ord != insertafter) break;
+                        Q.pop_back();
+                    }
 
-            */
-
-            //vector<pair<Node*, Node*>> Q=vector<pair<Node*, Node*>>();//TODO return Q by refference
-            for (auto it = start; it != end; ++it) 
-            {
-                Edge<T> edge=*it;
-                if (!edge.end->vacant)
-                {
-                    dfs(*edge.end, edge.start->ord,Q);
+                    invallidedges.emplace_back(edge.start->value, edge.end->value);
                 }
             }
-
-
         }
+    }
 
 };

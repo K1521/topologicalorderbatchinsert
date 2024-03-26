@@ -53,7 +53,7 @@ def mesuretime( randseed, nodenum, insertsintervall,density):
     edgenum=math.ceil(maxedgenum*density)
     repeats = math.ceil(rs/edgenum) #this makes more repeats for smaller tests to make them more accurate
     samplesintervall = edgenum+1
-    timings = run_cpp_program(nodenum, randseed, insertsintervall, repeats, edgenum, samplesintervall,2)
+    timings = run_cpp_program(nodenum, randseed, insertsintervall, repeats, edgenum, samplesintervall,1)
         #print("Timings:", timings)
     x,y=timings
     dy=y[-1]-y[0]#this is here to ignore setup time dy=y[-1] would be with setup time

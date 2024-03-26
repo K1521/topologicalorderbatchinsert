@@ -14,7 +14,7 @@ private:
     std::vector<std::pair<T, T>> cycleEdges;
 
 public:
-    CycleDetectedException(const std::vector<std::pair<T, T>>& cycleEdges);
+    CycleDetectedException<T>::CycleDetectedException(const std::vector<std::pair<T, T>>& cycleEdges);
     const char* what() const noexcept override;
     const std::vector<std::pair<T, T>>& getCycleEdges() const;
 };
