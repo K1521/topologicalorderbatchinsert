@@ -318,7 +318,7 @@ class topologicalordering{
 
                     dfs(*edge.end, edge.start->ord, Q);
                 } catch (const std::runtime_error& e) {
-                    for (int i = lb; i <= ub; ++i) ordinv[i]->onStack = false;
+                    for (int i = lb; i <= ub; ++i) ordinv[i]->onStack = false;//TODO DOESN WORK!!!!!!!!!! USE DFS!!!
 
                     while (!Q.empty()) {
                         auto [nodetoinsert, insertafter] = Q.back();
