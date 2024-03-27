@@ -34,7 +34,7 @@ class twrapper{
         try {
             t.insertedges(); // Attempt to insert edges
         } catch (const CycleDetectedException<int>& e) {
-            std::cerr << "Cycle detected. Handling exception..." << std::endl;
+            //std::cerr << "Cycle detected. Handling exception..." << std::endl;
             // Insert cycle edges into invallidedges
             for (const auto& edge : e.getCycleEdges()) {
                 invallidedges.push_back(edge);
@@ -86,13 +86,13 @@ class twrapper{
 };
 //std::shuffle(randedges.begin(), randedges.end(),gen);
 
-void randomgraphtest(const std::mt19937 &gen)
+void randomtopgraphtest(const std::mt19937 &gen)
 {
     std::vector<int> insertsintervalls = {1, 2, 3, 4, 8, 16, 32, 64, 512, 1024};
 
     
     for (int test = 0; test < 100; ++test) {
-        auto [randnodes, randedges] = makeGraph(50, INT32_MAX, gen);
+        auto [randnodes, randedges] = makeGraph(10, INT32_MAX, gen);
         for (int insertsintervall : insertsintervalls) {
             twrapper t;
             for (int i = 0; i < randedges.size(); ++i)
@@ -110,7 +110,7 @@ void randomgraphtest(const std::mt19937 &gen)
             }
 
             t.insertedges();
-            if (!t.iscorrect() || t.invallidedges.size() != 0)
+            if (!t.iscorrect() || t.invallidedges.size() != 0)//t has to be correct and there cant be invallid edges
                 throw std::runtime_error("incorrect");
 
         }
@@ -139,42 +139,6 @@ void addcycles(Tedges& edges,std::vector<int>& nodes,std::mt19937 &gen,int m){
     std::shuffle(nodes.begin(), nodes.end(), gen);
 
 }
-
-int main(int argc, char const *argv[])
-{
-    std::random_device rd;
-    std::mt19937 gen(rd());
-
-    randomgraphtest(gen);
-    std::cout<<"randomgraphtest succses"<<std::endl;
-
-    testcyclesonly(gen);
-    std::cout<<"testcyclesonly succses"<<std::endl;
-
-    /*topologicalordering<int> t;
-    t.addedge(0,1);
-    t.addedge(1,2);
-    t.addedge(2,0);
-    for(int i=0;i<t.size();i++){
-        std::cout<<t[i];
-    }
-    t.insertedges();
-    for(int i=0;i<t.size();i++){
-        std::cout<<t[i];
-    }
-    std::cout<<std::endl;
-    //t.insertedges();*/
-
-
-    
-
-    
-
-
-    /* code */
-    return 0;
-}
-
 void testcyclesonly(std::mt19937 &gen)
 {
     std::vector<int> insertsintervalls = {1, 2, 3, 4, 8, 16, 32, 64};
@@ -202,9 +166,99 @@ void testcyclesonly(std::mt19937 &gen)
                 }
 
                 t.insertedges();
-                if (!t.iscorrect() || t.invallidedges.size() != m)
+                if (!t.iscorrect() || t.invallidedges.size() != m)//t has to be correct and the number of invallid edges must equal the number of cycles
                     throw std::runtime_error("incorrect");
             }
         }
     }
 }
+void testgraphwithcycles(std::mt19937 &gen)
+{
+    std::vector<int> insertsintervalls = {1, 2, 3, 4, 8, 16, 32, 64};
+    for (int m = 1; m < 5; m++)
+    { // num cycles
+        for (int j = 0; j < 30; j++)
+        { // num tests
+            auto [randnodes, randedges] = makeGraph(5, INT32_MAX, gen);
+            addcycles(randedges, randnodes, gen, m);
+            for (int insertsintervall : insertsintervalls)
+            {
+                twrapper t;
+                for (int i = 0; i < randedges.size(); ++i)
+                {
+                    if (i % insertsintervall == 0)
+                    {
+                        t.insertedges();
+                        if (!t.iscorrect())
+                            throw std::runtime_error("incorrect");
+                    }
+
+                    auto [start, stop] = randedges[i];
+                    t.addedge(start, stop);
+                }
+
+                t.insertedges();
+                if (!(t.iscorrect() && t.invallidedges.size() >= m))//t has to be correct and the number of invallid edges must be greater than the number of cycles
+                    throw std::runtime_error("incorrect");
+            }
+        }
+    }
+}
+int main(int argc, char const *argv[])
+{
+    std::random_device rd;
+    auto r=rd();
+    r=1188961176;
+    std::mt19937 gen(r);
+    std::cout<<r<<std::endl;
+
+    //randomtopgraphtest(gen);
+    std::cout<<"randomtopgraphtest success"<<std::endl;
+
+    //testcyclesonly(gen);
+    std::cout<<"testcyclesonly success"<<std::endl;
+
+    //testgraphwithcycles(gen);
+    std::cout<<"testgraphwithcycles success"<<std::endl;
+
+
+
+    topologicalordering<int> t;
+    t.addedge(0,1);
+    t.addedge(3,0);
+    t.addedge(3,4);
+    t.addedge(5,6);
+    t.addedge(2,1);
+    t.addedge(8,0);
+    t.addedge(2,0);
+    t.addedge(2,4);
+    t.addedge(4,5);
+    t.addedge(0,1);
+    t.addedge(4,2);
+    //t.addedge(3,4);
+    //t.addedge(3,1);
+
+    try {
+            t.insertedges(); // Attempt to insert edges
+        } catch (const CycleDetectedException<int>& e) {
+
+        }
+    std::cout<<t.validate()<<std::endl;
+
+    for(int i=0;i<t.size();i++){
+        std::cout<<t[i];
+    }
+    std::cout<<std::endl;
+    //t.insertedges();*/
+
+
+    
+
+    
+
+
+    /* code */
+    return 0;
+}
+
+

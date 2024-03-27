@@ -3,6 +3,7 @@
 #include <unordered_map>  
 #include <algorithm>
 #include <stdexcept>
+#include <unordered_set>
 
 
 
@@ -81,6 +82,7 @@ class topologicalordering{
         std::vector<Node<T>*> ordinv;
         std::vector<Edge<T>> newedges;
         std::unordered_map< T, Node<T>* > ValueToNode;
+        //std::unordered_set<Edge<T>> addedEdges;//this is here so edges only get added once
         int usednodes=0;
         
         
@@ -197,7 +199,9 @@ class topologicalordering{
             //markNodeAsUsed(*newedge.end);
 
 
-            if(newedge.start->ord>newedge.end->ord){
+            if(newedge.start->ord>=newedge.end->ord){
+                //if newedge.start->ord==newedge.end->ord I push on newedges so insertedges throwa a exception
+                //you could throw a exception here directly but this way all the cycle exceptions are in insertedges
                 newedges.push_back(newedge);
             }
 
@@ -217,7 +221,7 @@ class topologicalordering{
                     });
 
             int lowerbound = newedges[0].end->ord;
-            int upperbound = newedges[0].start->ord;
+            //nt upperbound = newedges[0].start->ord;
             int s = 0; // start of current region
             Qtype Q;
 
@@ -230,10 +234,10 @@ class topologicalordering{
                         throw std::runtime_error("Q isn't empty D:");
                     }
 
-                    discover(newedges.begin() + s, newedges.begin() + i, Q, invallidedges, lowerbound, upperbound);
+                    discover(newedges.begin() + s, newedges.begin() + i, Q, invallidedges, lowerbound);//, upperbound);
                     shift(lowerbound, Q);
                     s = i;
-                    upperbound = x->ord;
+                    //upperbound = x->ord;
                 }
 
                 lowerbound = std::min(y->ord, lowerbound);
@@ -243,10 +247,15 @@ class topologicalordering{
                 throw std::runtime_error("Q isn't empty D:");
             }
 
-            discover(newedges.begin() + s, newedges.end(), Q, invallidedges, lowerbound, upperbound);
+            discover(newedges.begin() + s, newedges.end(), Q, invallidedges, lowerbound);//, upperbound);
             shift(lowerbound, Q);
 
             newedges.clear();
+
+            if (!Q.empty())
+            { // TODO Remove after testing
+                throw std::runtime_error("Q isn't empty D:");
+            }
 
             if (!invallidedges.empty()) {
                 throw CycleDetectedException<T>(invallidedges);
@@ -285,7 +294,7 @@ class topologicalordering{
 
 
         void dfs(Node<T>& v , int ub,Qtype& Q) {
-            v.vacant = true;
+            
             v.onStack = true;
             //cout << "visiting" << v->id<<endl;
             for (Node<T>* s : v.children)
@@ -293,43 +302,69 @@ class topologicalordering{
 
                 if (s->onStack||s->ord==ub)//this is not in the paper but neccesary for cycle detection
                     throw std::runtime_error("cycle");
-                if ((!s->vacant) && (s->ord < ub))
+                if ((!s->vacant) && (s->ord < ub))//maybe s->ord <= ub instead of s->ord==ub??
                     dfs(*s, ub,Q);
             }
             v.onStack = false;
+            v.vacant = true;
 
             //Q.emplace_back(&v, ordinv[ub]);
             Q.emplace_back(&v, ub);
         }
 
 
+        void dfscleanup(Node<T>& v , int ub) {
+            v.onStack = false;
+            for (Node<T>* s : v.children)
+                if (s->onStack)
+                    dfscleanup(*s, ub);
+        }
+
+        void discover(typename std::vector<Edge<T>>::iterator start,
+                    typename std::vector<Edge<T>>::iterator end,
+                    Qtype& Q,
+                    std::vector<std::pair<T, T>>& invallidedges,
+                    int lb/*,int ub*/) {
+            for (auto it = start; it != end; ++it) {
+                Edge<T> edge = *it;
+                if (!edge.end->vacant) {
+                    try {
+
+                        dfs(*edge.end, edge.start->ord, Q);
+                    } catch (const std::runtime_error& e) {
+
+                        //for (int i = lb; i <= ub; ++i) ordinv[i]->onStack = false;
+                        //cleanup stack (iterates over affected region)
+
+                        dfscleanup(*edge.end, edge.start->ord);
+                        /*for (int i = lb; i <= ub; ++i) if(ordinv[i]->onStack){
+                            throw std::runtime_error("stack not clean");//should never be thrown TODO Remove
+                        }*/
 
 
-    void discover(typename std::vector<Edge<T>>::iterator start,
-                typename std::vector<Edge<T>>::iterator end,
-                Qtype& Q,
-                std::vector<std::pair<T, T>>& invallidedges,
-                int lb,
-                int ub) {
-        for (auto it = start; it != end; ++it) {
-            Edge<T> edge = *it;
-            if (!edge.end->vacant) {
-                try {
+                        while (!Q.empty()) {//cleanup Q
+                            auto [nodetoinsert, insertafter] = Q.back();
+                            if (edge.start->ord != insertafter) break;
+                            Q.pop_back();
+                            nodetoinsert->vacant=false;//cleanup vacant
+                            ordinv[insertafter]->vacant=false;
+                        }
 
-                    dfs(*edge.end, edge.start->ord, Q);
-                } catch (const std::runtime_error& e) {
-                    for (int i = lb; i <= ub; ++i) ordinv[i]->onStack = false;//TODO DOESN WORK!!!!!!!!!! USE DFS!!!
-
-                    while (!Q.empty()) {
-                        auto [nodetoinsert, insertafter] = Q.back();
-                        if (edge.start->ord != insertafter) break;
-                        Q.pop_back();
+                        invallidedges.emplace_back(edge.start->value, edge.end->value);
+                        removeedge(edge);
                     }
-
-                    invallidedges.emplace_back(edge.start->value, edge.end->value);
                 }
             }
         }
-    }
+
+        void removeedge(Edge<T> edge){
+            auto vec=edge.start->children;//remove invallid edge from the graph
+            auto last_occurrence = std::find(vec.rbegin(), vec.rend(), edge.end); // search last ocurrence
+            if (last_occurrence != vec.rend()) {
+                vec.erase((last_occurrence + 1).base());
+            }else{
+                throw std::runtime_error("edge does not exist");
+            }
+        }
 
 };
