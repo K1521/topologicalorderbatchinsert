@@ -43,16 +43,28 @@ public:
 
 template <typename T>
 struct Edge {
-
     Node<T>* start;
     Node<T>* end;
 
     Edge(Node<T>* start, Node<T>* end) : start(start), end(end) {}
     friend class topologicalordering<T>;
     friend class NodeHandle<T>;
-
-
+    
+    bool operator==(const Edge<T>& rhs) const {
+        return start == rhs.start && end == rhs.end;
+    }
 };
+
+// Hash function for Edge<T>
+template<typename T>
+struct HashEdge {
+    std::size_t operator()(const Edge<T>& edge) const {
+        // Combine hash values of start and end pointers
+        std::hash<Node<T>*> hasher;
+        return hasher(edge.start) ^ (hasher(edge.end) << 1);
+    }
+};
+
 
 template <typename T>
 class NodeHandle {
@@ -82,7 +94,7 @@ class topologicalordering{
         std::vector<Node<T>*> ordinv;
         std::vector<Edge<T>> newedges;
         std::unordered_map< T, Node<T>* > ValueToNode;
-        //std::unordered_set<Edge<T>> addedEdges;//this is here so edges only get added once
+        std::unordered_set<Edge<T>,HashEdge<T>> addedEdges;//this is here so edges only get added once
         int usednodes=0;
         
         
@@ -110,7 +122,8 @@ class topologicalordering{
                     if(n.ord>=childnode->ord)
                     return false;
                 }
-                if(n.vacant||n.onStack)return false;
+                if(n.vacant||n.onStack)
+                    return false;
                     
             }
             return true;
@@ -193,20 +206,23 @@ class topologicalordering{
         }
 
         
-        void addedge(Edge<T> newedge){
+        void addedge(Edge<T> edge){
+            if(!addedEdges.insert(edge).second){//if edge already exists
+                return;
+            }
 
-            markNodeAsUsed(*newedge.start);
+            markNodeAsUsed(*edge.start);
             //markNodeAsUsed(*newedge.end);
 
 
-            if(newedge.start->ord>=newedge.end->ord){
-                //if newedge.start->ord==newedge.end->ord I push on newedges so insertedges throwa a exception
+            if(edge.start->ord>=edge.end->ord){
+                //if edge.start->ord==edge.end->ord I push on newedges so insertedges throwa a exception
                 //you could throw a exception here directly but this way all the cycle exceptions are in insertedges
-                newedges.push_back(newedge);
+                newedges.push_back(edge);
             }
 
             
-            newedge.start->children.push_back(newedge.end);
+            edge.start->children.push_back(edge.end);
 
         }
 
@@ -328,6 +344,7 @@ class topologicalordering{
             for (auto it = start; it != end; ++it) {
                 Edge<T> edge = *it;
                 if (!edge.end->vacant) {
+                    int qlen=Q.size();
                     try {
 
                         dfs(*edge.end, edge.start->ord, Q);
@@ -341,14 +358,22 @@ class topologicalordering{
                             throw std::runtime_error("stack not clean");//should never be thrown TODO Remove
                         }*/
 
+                        for (int i = qlen; i < Q.size(); ++i){
+                            auto [nodetoinsert, insertafter] = Q[i];
+                            nodetoinsert->vacant=false;//cleanup vacant
+                            ordinv[insertafter]->vacant=false;
+                        }
+                        Q.resize(qlen);//cleanup Q
 
-                        while (!Q.empty()) {//cleanup Q
+
+
+                        /*while (!Q.empty()) {//cleanup Q
                             auto [nodetoinsert, insertafter] = Q.back();
                             if (edge.start->ord != insertafter) break;
                             Q.pop_back();
                             nodetoinsert->vacant=false;//cleanup vacant
                             ordinv[insertafter]->vacant=false;
-                        }
+                        }*/
 
                         invallidedges.emplace_back(edge.start->value, edge.end->value);
                         removeedge(edge);
@@ -358,13 +383,15 @@ class topologicalordering{
         }
 
         void removeedge(Edge<T> edge){
-            auto vec=edge.start->children;//remove invallid edge from the graph
+            auto& vec=edge.start->children;//remove invallid edge from the graph
             auto last_occurrence = std::find(vec.rbegin(), vec.rend(), edge.end); // search last ocurrence
             if (last_occurrence != vec.rend()) {
                 vec.erase((last_occurrence + 1).base());
             }else{
                 throw std::runtime_error("edge does not exist");
             }
+            addedEdges.erase(edge);
+
         }
 
 };

@@ -40,14 +40,16 @@ class twrapper{
                 invallidedges.push_back(edge);
             }
             // Remove cycle edges from edges
-            for (const auto& cycleEdge : e.getCycleEdges()) {
-                auto it = std::find(edges.rbegin(), edges.rend(), cycleEdge);
+            
+           for (const auto& cycleEdge : e.getCycleEdges()) {
+            edges.erase(std::remove(edges.begin(), edges.end(), cycleEdge), edges.end());
+                /* auto it = std::find(edges.rbegin(), edges.rend(), cycleEdge);
                 if (it != edges.rend()) {
                     edges.erase((it + 1).base()); // Erase the element pointed to by the reverse iterator
                 }else  {
                     // Throw an exception if the cycle edge is not found
                     throw std::runtime_error("Cycle edge not found in the edges vector");
-                }
+                }*/
             }
         }
     }
@@ -58,6 +60,14 @@ class twrapper{
     }
 
     bool iscorrect(){
+        if(!t.validate()){
+            /*for(int i=0;i<t.size();i++)
+                std::cout<<t[i];
+            std::cout<<std::endl;*/
+            
+            return false;
+        }
+            
         if(nodes.size()!=t.size())
             return false;
 
@@ -122,7 +132,7 @@ void addcycles(Tedges& edges,std::vector<int>& nodes,std::mt19937 &gen,int m){
     //adds m non intersecting cycles to a graph
     int startnode=0;
     int accnode=0;
-    std::uniform_int_distribution<int> distribution(0, 10);
+    std::uniform_int_distribution<int> distribution(0, 5);
     for(int j=0;j<m;j++){
         int n=distribution(gen);
         for(int i=0;i<n;i++){//this generates a cycle
@@ -179,8 +189,9 @@ void testgraphwithcycles(std::mt19937 &gen)
     { // num cycles
         for (int j = 0; j < 30; j++)
         { // num tests
-            auto [randnodes, randedges] = makeGraph(5, INT32_MAX, gen);
+            auto [randnodes, randedges] = makeGraph(20, INT32_MAX, gen);
             addcycles(randedges, randnodes, gen, m);
+            std::shuffle(randedges.begin(), randedges.end(), gen);
             for (int insertsintervall : insertsintervalls)
             {
                 twrapper t;
@@ -208,47 +219,87 @@ int main(int argc, char const *argv[])
 {
     std::random_device rd;
     auto r=rd();
-    r=1188961176;
+    //r=1188961176;
     std::mt19937 gen(r);
     std::cout<<r<<std::endl;
 
-    //randomtopgraphtest(gen);
+
+    /*twrapper t;
+    t.addedge(3,2);
+    t.addedge(4,5);
+
+    t.insertedges();
+    std::cout<<"?"<<t.iscorrect()<<std::endl;
+    for(int i=0;i<t.t.size();i++){std::cout<<t.t[i];}std::cout<<std::endl;
+
+    t.addedge(2,4);
+    t.addedge(2,3);
+    
+    t.insertedges();
+    std::cout<<"?"<<t.iscorrect()<<std::endl;
+    for(int i=0;i<t.t.size();i++){std::cout<<t.t[i];}std::cout<<std::endl;
+
+
+
+    return 0;*/
+
+
+    randomtopgraphtest(gen);
     std::cout<<"randomtopgraphtest success"<<std::endl;
 
-    //testcyclesonly(gen);
+    testcyclesonly(gen);
     std::cout<<"testcyclesonly success"<<std::endl;
 
-    //testgraphwithcycles(gen);
+    testgraphwithcycles(gen);
     std::cout<<"testgraphwithcycles success"<<std::endl;
 
 
 
-    topologicalordering<int> t;
-    t.addedge(0,1);
-    t.addedge(3,0);
-    t.addedge(3,4);
-    t.addedge(5,6);
-    t.addedge(2,1);
-    t.addedge(8,0);
-    t.addedge(2,0);
-    t.addedge(2,4);
-    t.addedge(4,5);
-    t.addedge(0,1);
-    t.addedge(4,2);
+    /*twrapper t;
+
+
+
+    //t.addedge(0,1);
+    //t.addedge(3,0);
+    //t.addedge(3,4);
+    //t.addedge(5,6);
+    //t.addedge(2,1);
+    //t.addedge(8,0);
+    //t.addedge(2,0);
+    //t.addedge(2,4);
+    //t.addedge(4,5);
+    //t.addedge(0,1);
+    //t.addedge(4,2);
     //t.addedge(3,4);
     //t.addedge(3,1);
+    
+    /*t.addedge(1,2);
+    t.addedge(2,1);
+    t.addedge(3,3);
+    t.addedge(4,5);
+    t.addedge(4,5);*/
 
-    try {
-            t.insertedges(); // Attempt to insert edges
-        } catch (const CycleDetectedException<int>& e) {
+    /*//t.addedge(0,4);
+    t.addedge(2,3);
+    t.addedge(0,1);
+    t.addedge(1,0);
+    t.addedge(1,2);
+    //t.addedge(1,4);
+    //t.addedge(3,0);
+    //t.addedge(2,4);
+    t.addedge(2,0);
+    t.addedge(1,2);
+    //t.addedge(2,3);
+    //t.addedge(3,4);
+    //t.addedge(1,3);
+    //t.addedge(0,3);
+    t.insertedges();
+    std::cout<<t.iscorrect()<<std::endl;*/
 
-        }
-    std::cout<<t.validate()<<std::endl;
-
-    for(int i=0;i<t.size();i++){
+    /*for(int i=0;i<t.size();i++){
         std::cout<<t[i];
     }
-    std::cout<<std::endl;
+    std::cout<<std::endl;*/
     //t.insertedges();*/
 
 
