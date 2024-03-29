@@ -39,8 +39,8 @@ class twrapper{
             for (const auto& edge : e.getCycleEdges()) {
                 invallidedges.push_back(edge);
             }
+
             // Remove cycle edges from edges
-            
            for (const auto& cycleEdge : e.getCycleEdges()) {
             edges.erase(std::remove(edges.begin(), edges.end(), cycleEdge), edges.end());
                 /* auto it = std::find(edges.rbegin(), edges.rend(), cycleEdge);
@@ -105,6 +105,7 @@ void randomtopgraphtest(const std::mt19937 &gen)
         auto [randnodes, randedges] = makeGraph(10, INT32_MAX, gen);
         for (int insertsintervall : insertsintervalls) {
             twrapper t;
+            if(test%2==0)for(int n:randnodes)t.addnode(n);
             for (int i = 0; i < randedges.size(); ++i)
             {
                 if (i % insertsintervall == 0)
@@ -157,11 +158,12 @@ void testcyclesonly(std::mt19937 &gen)
         for (int j = 0; j < 30; j++)
         { // num tests
             Tedges randedges;
-            std::vector<int> nodes;
-            addcycles(randedges, nodes, gen, m);
+            std::vector<int> randnodes;
+            addcycles(randedges, randnodes, gen, m);
             for (int insertsintervall : insertsintervalls)
             {
                 twrapper t;
+                if(j%2==0)for(int n:randnodes)t.addnode(n);
                 for (int i = 0; i < randedges.size(); ++i)
                 {
                     if (i % insertsintervall == 0)
@@ -195,6 +197,7 @@ void testgraphwithcycles(std::mt19937 &gen)
             for (int insertsintervall : insertsintervalls)
             {
                 twrapper t;
+                if(j%2==0)for(int n:randnodes)t.addnode(n);
                 for (int i = 0; i < randedges.size(); ++i)
                 {
                     if (i % insertsintervall == 0)
@@ -212,6 +215,44 @@ void testgraphwithcycles(std::mt19937 &gen)
                 if (!(t.iscorrect() && t.invallidedges.size() >= m))//t has to be correct and the number of invallid edges must be greater than the number of cycles
                     throw std::runtime_error("incorrect");
             }
+        }
+    }
+}
+
+void testgraph2(std::mt19937 &gen)
+{
+    std::vector<int> insertsintervalls = {1, 2, 3, 4, 8, 16, 32, 64};
+    for (int i = 0; i < 10; i++)
+    { // num cycles
+        auto [randnodes, randedges] = makeGraph(20, INT32_MAX, gen);
+        auto [randnodes2, randedges2] = makeGraph(20, INT32_MAX, gen);
+        auto [randnodes3, randedges3] = makeGraph(20, INT32_MAX, gen);
+        auto [randnodes4, randedges4] = makeGraph(20, INT32_MAX, gen);
+        randedges.insert( randedges.end(), randedges2.begin(), randedges2.end() );
+        randedges.insert( randedges.end(), randedges3.begin(), randedges3.end() );
+        randedges.insert( randedges.end(), randedges4.begin(), randedges4.end() );
+        std::shuffle(randedges.begin(), randedges.end(), gen);
+        for (int insertsintervall : insertsintervalls)
+        {
+            twrapper t;
+            if(i%2==0)for(int n:randnodes)t.addnode(n);//add nodes in half of testcases
+
+            for (int i = 0; i < randedges.size(); ++i)
+            {
+                if (i % insertsintervall == 0)
+                {
+                    t.insertedges();
+                    if (!t.iscorrect())
+                        throw std::runtime_error("incorrect");
+                }
+
+                auto [start, stop] = randedges[i];
+                t.addedge(start, stop);
+            }
+
+            t.insertedges();
+            if (!t.iscorrect())//t has to be correct and the number of invallid edges must be greater than the number of cycles
+                throw std::runtime_error("incorrect");
         }
     }
 }
@@ -237,13 +278,17 @@ int main(int argc, char const *argv[])
     
     t.insertedges();
     std::cout<<"?"<<t.iscorrect()<<std::endl;
-    for(int i=0;i<t.t.size();i++){std::cout<<t.t[i];}std::cout<<std::endl;
+    for(int i=0;i<t.t.size();i++){
+        std::cout<<t.t[i];
+    }
+    std::cout<<std::endl;
 
-
+    
 
     return 0;*/
-
-
+    int i=0;
+    
+    while(true){
     randomtopgraphtest(gen);
     std::cout<<"randomtopgraphtest success"<<std::endl;
 
@@ -252,6 +297,13 @@ int main(int argc, char const *argv[])
 
     testgraphwithcycles(gen);
     std::cout<<"testgraphwithcycles success"<<std::endl;
+
+    testgraph2(gen);
+    std::cout<<"testgraph2 success"<<std::endl;
+
+    std::cout<<i++<<std::endl;
+
+    }
 
 
 

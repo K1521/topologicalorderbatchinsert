@@ -17,8 +17,8 @@ class Node {
     bool vacant = false;
     bool onStack = false;
     int ord;
-    std::vector<Node<T>*> children;
-    //std::unordered_set<Node<T>*> children;
+    //std::vector<Node<T>*> children;
+    std::unordered_set<Node<T>*> children;
     T value;
 
     Node(int ord,T value) : ord(ord), value(value) {}
@@ -210,8 +210,14 @@ class topologicalordering{
 
         
         void addedge(Edge<T> edge){
-            markNodeAsUsed(*edge.start);
+            /*if(!addedEdges.insert(edge).second){//if edge already exists
+                return;
+            }*/
 
+            if(!edge.start->children.insert(edge.end).second)return;//insert edge and if edge already exists returb
+
+            markNodeAsUsed(*edge.start);
+            //markNodeAsUsed(*newedge.end);
 
 
             if(edge.start->ord>=edge.end->ord){
@@ -221,7 +227,7 @@ class topologicalordering{
             }
 
             
-            edge.start->children.push_back(edge.end);
+            //edge.start->children.push_back(edge.end);
             
 
         }
@@ -383,15 +389,15 @@ class topologicalordering{
         }
 
         void removeedge(Edge<T> edge){
-            //edge.start->children.erase(edge.end);
-            auto& vec=edge.start->children;//remove invallid edge from the graph
+            edge.start->children.erase(edge.end);
+            /*auto& vec=edge.start->children;//remove invallid edge from the graph
             auto last_occurrence = std::find(vec.rbegin(), vec.rend(), edge.end); // search last ocurrence
             if (last_occurrence != vec.rend()) {
                 vec.erase((last_occurrence + 1).base());
             }else{
                 throw std::runtime_error("edge does not exist");
             }
-            /*addedEdges.erase(edge);*/
+            addedEdges.erase(edge);*/
 
         }
 

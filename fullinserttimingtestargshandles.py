@@ -31,37 +31,33 @@ repeats = 5
 randseed = 42
 nodenum = 10000
 
+edgenum=1000000
 
-insertsintervall = 10000
 plt.subplot(1,2, 1) 
-for edgenum in [10000,100000,1000000]:
+for insertsintervall in [10,100,1000,10000]:
     samplesintervall = edgenum//1000
     timings = run_cpp_program(nodenum, randseed, insertsintervall, repeats, edgenum, samplesintervall,1)
     #print("Timings:", timings)
     x,y=timings
     plt.plot(x,y, marker='o',label=f'{insertsintervall=}')
 
-plt.title('Timing vs Iteration')
-plt.xlabel('Iteration')
+
+plt.xlabel('Number of Edges')
 plt.ylabel('Time (microseconds)')
 plt.legend()
 
 
-repeats = 5
-randseed = 42
-nodenum = 10000
 
-insertsintervall = 10000
 plt.subplot(1,2, 2) 
-for edgenum in [10000,100000,1000000]:
+for insertsintervall in [10,100,1000,10000]:
     samplesintervall = edgenum//1000
     timings = run_cpp_program(nodenum, randseed, insertsintervall, repeats, edgenum, samplesintervall,2)
     #print("Timings:", timings)
     x,y=timings
     plt.plot(x,y, marker='o',label=f'{insertsintervall=}')
 
-plt.title('Timing vs Iteration')
-plt.xlabel('Iteration')
+#plt.title('Timing vs Iteration')
+plt.xlabel('Number of Edges')
 plt.ylabel('Time (microseconds)')
 plt.legend()
 #plt.show()
