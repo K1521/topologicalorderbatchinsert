@@ -1,8 +1,19 @@
-#include <set>
+#include <unordered_set>
 #include <random>
 #include <iostream>
 #include <algorithm> // for std::shuffle
+struct PairHash {
+    std::size_t operator()(const std::pair<int, int>& p) const {
+        static std::hash<int> h;
+        return h(p.first) ^ h(-p.second);
+    }
+};
 
+struct PairEqual {
+    bool operator()(const std::pair<int, int>& lhs, const std::pair<int, int>& rhs) const {
+        return lhs.first == rhs.first && lhs.second == rhs.second;
+    }
+};
 std::pair<std::vector<int>, std::vector<std::pair<int, int>>> 
 makefullgraph(int nodenum,std::mt19937 gen){
     std::vector<int> randnodes;
@@ -42,7 +53,8 @@ makeGraph(int numNodes , int numEdges,std::mt19937 gen) {
     std::shuffle(randnodes.begin(), randnodes.end(),gen);
 
     
-    std::set<std::pair<int, int>> edgesSet;
+    std::unordered_set<std::pair<int, int>, PairHash, PairEqual> edgesSet;
+    edgesSet.reserve(numEdges);
 
     while (edgesSet.size() < numEdges) {
         int a = std::uniform_int_distribution<int>(0, numNodes - 2)(gen);

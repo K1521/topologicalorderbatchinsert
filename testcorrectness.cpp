@@ -19,7 +19,7 @@ class twrapper{
     topologicalordering<int> t;
     Tedges edges;
     Tedges invallidedges;
-    std::set<int> nodes; 
+    std::unordered_set<int> nodes; 
 
     
     void addedge(int start,int end){

@@ -81,7 +81,7 @@ class NodeHandle {
     void addedge(NodeHandle<T> &other){
         if(owner!=other.owner)
             throw std::runtime_error("Cannot add edge between nodes from different topological orderings.");
-        owner->addedge(Edge(node,other.node));
+        owner->addedge(Edge<T>(node,other.node));
     }
 };
 
@@ -133,7 +133,7 @@ class topologicalordering{
         }
 
         NodeHandle<T> addNode(T value){
-            return NodeHandle(this,getOrCreateNode(value));
+            return NodeHandle<T>(this,getOrCreateNode(value));
         }
 
         void reserve(size_t n) {
@@ -145,7 +145,7 @@ class topologicalordering{
 
 
         void addedge(T start,T end){//todo add direct cycle detection
-            addedge(Edge(getOrCreateNode(start),getOrCreateNode(end)));
+            addedge(Edge<T>(getOrCreateNode(start),getOrCreateNode(end)));
         }
 
         size_t size() const {
@@ -156,8 +156,12 @@ class topologicalordering{
             return ordinv[index]->value;
         }
 
-        T at(size_t index) const {//TODO throw index out of bounds
+        T at(size_t index) const {
             return ordinv.at(index)->value;
+        }
+
+        bool issorted(){
+            return newedges.empty();
         }
 
         int ord(T node)const {//index of node in the topological order
